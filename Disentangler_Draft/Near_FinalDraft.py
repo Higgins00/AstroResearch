@@ -47,7 +47,7 @@ class PixelMapFit:
         
         # Make a design matrix and pass it to a linear regression corrector
         self.raw_lc = self.tpf.to_lightcurve(aperture_mask=self.aperture)
-        self.dm = lk.DesignMatrix(tpf.flux[:, ~targetpixelfile.create_threshold_mask()], name='regressors').pca(principle_components)
+        self.dm = lk.DesignMatrix(self.tpf.flux[:, ~self.tpf.create_threshold_mask()], name='regressors').pca(principle_components)
         rc = lk.RegressionCorrector(self.raw_lc)
         corrected_lc = rc.correct(self.dm.append_constant())
         corrected_lc[np.where(corrected_lc.quality == 0)]
