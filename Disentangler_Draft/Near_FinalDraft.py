@@ -250,7 +250,7 @@ class PixelMapFit:
             result.RA_ICRS += pmra
             result.DE_ICRS += pmdec
             radecs = np.vstack([result['RA_ICRS'], result['DE_ICRS']]).T
-            coords = tpf.wcs.all_world2pix(radecs, 0) 
+            coords = self.tpf.wcs.all_world2pix(radecs, 0) 
 
 
 
