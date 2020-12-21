@@ -347,7 +347,7 @@ class PixelMapFit:
         if (self.gaiadata != None):
             plt.scatter(self.gaiadata['x'],self.gaiadata['y'],s=self.gaiadata['size']*5,c='white',alpha=.6)
             plt.scatter(self.centroid[0],self.centroid[1],marker='X',s=100)
-            plt.scatter(self.gaiadata['x'][3],self.gaiadata['y'][3],s=self.gaiadata['size']*5,c='red',alpha=1)
+            
         plt.xlim(-.5,self.aperture.shape[1]-1+.5)
         plt.ylim(-.5,self.aperture.shape[0]-1+.5)
         print(self.starfit)
