@@ -1,24 +1,12 @@
-
 # coding: utf-8
 
-# In[ ]:
-
-
 from __future__ import division, print_function
-import logging
-import warnings
 import numpy as np
-from astropy.stats import sigma_clip
-import os
 from astropy.coordinates import SkyCoord, Angle
 import astropy.units as u
 import matplotlib.pyplot as plt
 import pandas as pd
-import scipy as sp
 import lightkurve as lk
-from scipy import stats
-from astropy import units as u
-import scipy.optimize as opt
 from photutils import centroids as cent
 import lmfit as lm
 from lmfit import Minimizer, Parameters, report_fit
@@ -38,118 +26,83 @@ class PixelMapFit:
         
     """
     
-    def __init__(self, targetpixelfile, gaia=True, magnitude_limit=18, frequencies=[], frequnit=u.uHz, principle_components = 5, **kwargs):
+    def __init__(self, targetpixelfile, gaia=True, magnitude_limit=18, 
+                 frequencies=[], frequnit=u.uHz, principal_components = 5, 
+                 aperture=None, **kwargs):
 
         #Defining an aperture that will be used in plotting and making empty 2-d arrays of the correct size for masks
-        self.aperture = targetpixelfile.pipeline_mask
+        self.aperture = aperture
+        if self.aperture is None:
+            self.aperture = targetpixelfile.pipeline_mask     
         self.tpf = targetpixelfile
     
         
         # Make a design matrix and pass it to a linear regression corrector
         self.raw_lc = self.tpf.to_lightcurve(aperture_mask=self.aperture)
-        self.dm = lk.DesignMatrix(self.tpf.flux[:, ~self.tpf.create_threshold_mask()], name='regressors').pca(principle_components)
+        self.dm = lk.DesignMatrix(self.tpf.flux[:, ~self.tpf.create_threshold_mask()], name='regressors').pca(principal_components)
         rc = lk.RegressionCorrector(self.raw_lc)
         corrected_lc = rc.correct(self.dm.append_constant())
-        corrected_lc[np.where(corrected_lc.quality == 0)]
+        corrected_lc[np.where(corrected_lc.quality == 0)] ##Doesn't do anything???
         self.corrected_lc = corrected_lc.remove_outliers()
         self.frequency_list = np.asarray((frequencies*frequnit).to(1/u.d))
-        self.principle_components = principle_components
+        nfrequencies = len(self.frequency_list)
+        self.principal_components = principal_components
         
-        def Obtain_Initial_Phase(tpf,corrected_lc,frequency_list):
+        def lc_model(time,amp,freq,phase):
+            return amp*np.sin(2*np.pi*freq*time + phase)
 
-            flux = corrected_lc.flux
-            times = corrected_lc.time - np.mean(corrected_lc.time)
-            pg = corrected_lc.to_periodogram(frequency = frequency_list,ls_method='slow')
-            initial_flux= np.asarray(pg.power)
-
-            initial_phase = np.zeros(len(frequency_list))
-
-            def lc_model(time,amp,freq,phase):
-                return amp*np.sin(2*np.pi*freq*time + phase)
-
-            def background_model(time,height):
-                return time*height/time
-            for j in np.arange(len(frequency_list)):
-                for i in np.arange(len(frequency_list)):
-
-                    if (i == 0):
-                        model = lm.Model(lc_model,independent_vars=['time'],prefix='f{0:d}'.format(i)) 
-                        model += lm.Model(background_model, independent_vars=['time'])
-                    else:
-                        model += lm.Model(lc_model,independent_vars=['time'],prefix='f{0:d}'.format(i))
-
-
-                    model.set_param_hint('f{0:d}phase'.format(i), min = -np.pi, max = np.pi ,value= initial_phase[i],vary = False)
-                    model.set_param_hint('f{0:d}amp'.format(i), value = initial_flux[i],vary=False)
-                    model.set_param_hint('height', value= np.mean(flux),vary=False)
-                    model.set_param_hint('f{0:d}freq'.format(i),value = frequency_list[i], vary = False)
-
-
-                params = model.make_params()
-                params['f{0:d}phase'.format(j)].set(vary=True)
-                params['f{0:d}phase'.format(j)].set(value = initial_phase[j])
-                params['f{0:d}phase'.format(j)].set(brute_step=np.pi/10)
-                result = model.fit(corrected_lc.flux,params,time=times,method = 'brute')
-                initial_phase[j]=result.best_values['f{0:d}phase'.format(j)]
-
-            return initial_phase
+        def background_model(time,height):
+            return np.ones(len(time))*height
         
-        self.initial_phases = Obtain_Initial_Phase(self.tpf,self.corrected_lc,self.frequency_list)
+        #Obtain Initial Phase
+
+        flux = self.corrected_lc.flux
+        times = self.corrected_lc.time - np.mean(self.corrected_lc.time)
+        pg = self.corrected_lc.to_periodogram(frequency = self.frequency_list,ls_method='slow')
+        initial_flux= np.asarray(pg.power)
+
+        self.phases = np.zeros(nfrequencies)
         
-        def Obtain_Final_Phase(tpf,corrected_lc,frequency_list,initial_phases):
-
-            flux = corrected_lc.flux
-            times = corrected_lc.time - np.mean(corrected_lc.time)
-            pg = corrected_lc.to_periodogram(frequency = frequency_list)
-            initial_flux= np.asarray(pg.power)
-
-
-            def lc_model(time,amp,freq,phase):
-                return amp*np.sin(2*np.pi*freq*time + phase)
-
-            def background_model(time,height):
-                return time*height/time
-
-            for i in np.arange(len(frequency_list)):
-
-                if (i == 0):
-                    model = lm.Model(lc_model,independent_vars=['time'],prefix='f{0:d}'.format(i)) 
-                    model += lm.Model(background_model, independent_vars=['time'])
-                else:
-                    model += lm.Model(lc_model,independent_vars=['time'],prefix='f{0:d}'.format(i))
-
-
-                model.set_param_hint('f{0:d}phase'.format(i), min = -np.pi, max = np.pi ,value= initial_phases[i],vary = True)
-                model.set_param_hint('f{0:d}amp'.format(i), value = initial_flux[i],vary=True)
-                model.set_param_hint('height', value= np.mean(flux),vary=True)
-                model.set_param_hint('f{0:d}freq'.format(i),value = frequency_list[i], vary = False)
-
+        for i in np.arange(nfrequencies):
+            model = lm.Model(lc_model,independent_vars=['time'],prefix='f{0:d}'.format(i)) 
+            model += lm.Model(background_model, independent_vars=['time'])
+               
+            model.set_param_hint('f{0:d}phase'.format(i) ,value= self.phases[i],vary = True)
+            model.set_param_hint('f{0:d}amp'.format(i), value = initial_flux[i],vary=False)
+            model.set_param_hint('height', value= np.mean(flux),vary=False)
+            model.set_param_hint('f{0:d}freq'.format(i),value = self.frequency_list[i], vary = False)
 
             params = model.make_params()
-
-            result = model.fit(corrected_lc.flux,params,time=times)
+            #params['f{0:d}phase'.format(i)].set(vary=True)
+            #params['f{0:d}phase'.format(i)].set(value = self.phases[i])
+            params['f{0:d}phase'.format(i)].set(brute_step=np.pi/10)
+            result = model.fit(flux,params,time=times,method = 'brute')
+            self.phases[i]=result.best_values['f{0:d}phase'.format(i)]
             
-            final_phases = [result.best_values['f{0:d}phase'.format(j)] for j in np.arange(len(frequency_list))]
+        #Obtain Final Phase
+        
+        for i in np.arange(nfrequencies):
+            
+            if (i == 0):
+                model = lm.Model(lc_model,independent_vars=['time'],prefix='f{0:d}'.format(i)) 
+                model += lm.Model(background_model, independent_vars=['time'])
+            else:
+                model += lm.Model(lc_model,independent_vars=['time'],prefix='f{0:d}'.format(i))
+                
+            model.set_param_hint('f{0:d}phase'.format(i), value= self.phases[i],vary = True)
+            model.set_param_hint('f{0:d}amp'.format(i), value = initial_flux[i],vary=True)
+            model.set_param_hint('height', value= np.mean(flux),vary=True)
+            model.set_param_hint('f{0:d}freq'.format(i),value = self.frequency_list[i], vary = False)
+            
+        params = model.make_params()
 
-    
-            return final_phases
-
-        self.final_phases = Obtain_Final_Phase(self.tpf,self.corrected_lc,self.frequency_list,self.initial_phases)
-    
-        def Obtain_Final_Fit(tpf,corrected_lc,frequency_list,final_phases):
-
-            flux = corrected_lc.flux
+        result = model.fit(flux,params,time=times)
+            
+        self.phases = [result.best_values['f{0:d}phase'.format(j)] for j in np.arange(nfrequencies)]
+        
+        def Obtain_Final_Fit(corrected_lc,frequency_list,phases):
             times = corrected_lc.time - np.mean(corrected_lc.time)
-            pg = corrected_lc.to_periodogram(frequency = frequency_list)
-            initial_flux= np.asarray(pg.power)
-
-
-            def lc_model(time,amp,freq,phase):
-                return amp*np.sin(2*np.pi*freq*time + phase)
-
-            def background_model(time,height):
-                return time*height/time
-
+            
             for i in np.arange(len(frequency_list)):
 
                 if (i == 0):
@@ -159,7 +112,7 @@ class PixelMapFit:
                     model += lm.Model(lc_model,independent_vars=['time'],prefix='f{0:d}'.format(i))
 
 
-                model.set_param_hint('f{0:d}phase'.format(i), value= final_phases[i],vary = False)
+                model.set_param_hint('f{0:d}phase'.format(i), value= phases[i],vary = False)
                 model.set_param_hint('f{0:d}amp'.format(i), value = initial_flux[i],vary=True)
                 model.set_param_hint('height', value= np.mean(flux),vary=True)
                 model.set_param_hint('f{0:d}freq'.format(i),value = frequency_list[i], vary = False)
@@ -193,14 +146,12 @@ class PixelMapFit:
                 lc = rcc.correct(self.dm.append_constant())
                 #lc = lc[np.where(lc.quality == 0)]
                 #lc = lc.remove_outliers()
-
                 
                 
-                
-                bestfit = Obtain_Final_Fit(self.tpf,lc,self.frequency_list,self.final_phases)
-                heat = np.asarray([bestfit.best_values['f{0:d}amp'.format(n)] for n in np.arange(len(self.frequency_list))])
+                bestfit = Obtain_Final_Fit(lc,self.frequency_list,self.phases)
+                heat = np.asarray([bestfit.best_values['f{0:d}amp'.format(n)] for n in np.arange(nfrequencies)])
                 #heat = bestfit.best_values['f0amp']# / bestfit.params['f0amp'].stderr
-                heat_error =  np.asarray([bestfit.params['f{0:d}amp'.format(n)].stderr for n in np.arange(len(self.frequency_list))])
+                heat_error =  np.asarray([bestfit.params['f{0:d}amp'.format(n)].stderr for n in np.arange(nfrequencies)])
                 
                 #Extending the list of fitting data for each pixel
                 heats.extend([heat])
@@ -355,8 +306,8 @@ class PixelMapFit:
     
     def pca(self):
         plt.figure(figsize=(12,5))
-        plt.plot(self.tpf.time, self.dm.values + np.arange(self.principle_components)*0.2)
-        plt.title('Principle Components Contributions')
+        plt.plot(self.tpf.time, self.dm.values + np.arange(self.principal_components)*0.2)
+        plt.title('principal Components Contributions')
         plt.xlabel('Offset')
         g2 = self.raw_lc.plot(label='Raw light curve')
         self.corrected_lc.plot(ax=g2, label='Corrected light curve')
