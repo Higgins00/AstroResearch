@@ -68,7 +68,7 @@ class PixelMapFit:
                 return amp*np.sin(2*np.pi*freq*time + phase)
 
             def background_model(time,height):
-                return time*height/time
+                return np.ones(len(time))*height
             for j in np.arange(len(frequency_list)):
                 for i in np.arange(len(frequency_list)):
 
@@ -108,7 +108,7 @@ class PixelMapFit:
                 return amp*np.sin(2*np.pi*freq*time + phase)
 
             def background_model(time,height):
-                return time*height/time
+                return np.ones(len(time))*height
 
             for i in np.arange(len(frequency_list)):
 
@@ -148,7 +148,7 @@ class PixelMapFit:
                 return amp*np.sin(2*np.pi*freq*time + phase)
 
             def background_model(time,height):
-                return time*height/time
+                return np.ones(len(time))*height
 
             for i in np.arange(len(frequency_list)):
 
@@ -300,12 +300,14 @@ class PixelMapFit:
                     return np.asarray(res)
 
                 #Set starting values to converge from
-                c = cent.centroid_2dg(self.heat_stamp.sum(axis=0).reshape(self.size) / np.sqrt((self.heatmap_error**2).sum(axis=0)).reshape(self.size))
+                heatmap_error[np.where(heatmap_error==None)]=np.nan
+                composite_heatmap = heat_stamp.sum(axis=0).reshape(size) / ((np.nansum(heatmap_error**2,axis=0))**(1/2)).reshape(size)#issue with numpy using sqrt?
+                c = np.where(composite_heatmap==composite_heatmap.max())
                 params = Parameters()
                 for i in np.arange(len(frequencies)):
                     params.add('height{0:d}'.format(i), value=np.max(self.heat_stamp[i]))
-                params.add('x', value=c[0]) 
-                params.add('y', value=c[1])
+                params.add('x', value=c[1][0]) 
+                params.add('y', value=c[0][0])
                 params.add('sigma', value=1)
                 
                 #Do the fit
