@@ -324,15 +324,16 @@ class PixelMapFit:
                 if gaia_data ==None :
                     raise no_gaia_data_message
 
-                else:    
+                else:
+                    distances = np.square(self.x-gaia_data['x'])+np.square(self.y-gaia_data['y'])
                     closest_star_mask = np.where(np.square(self.x-gaia_data['x'])+np.square(self.y-gaia_data['y'])==(np.square(self.x-gaia_data['x'])+np.square(self.y-gaia_data['y'])).min())
                     stars = dict(ra = np.asarray(gaia_data['ra']),
                                  dec = np.asarray(gaia_data['dec']),
                                  source = np.asarray(gaia_data['source']),
                                  x = np.asarray(gaia_data['x']),
                                  y = np.asarray(gaia_data['y']),
-                                 distance = np.square(self.x-gaia_data['x'])+np.square(self.y-gaia_data['y']),
-                                 probability = stats.norm.sf(distance,scale=np.sqrt(self.result.params['x'].stderr**2 +self.result.params['y'].stderr**2 )))
+                                 distance = distances,
+                                 probability = stats.norm.sf(distances,scale=np.sqrt(self.result.params['x'].stderr**2 +self.result.params['y'].stderr**2 )))
                     starlist = pd.DataFrame.from_dict(stars)
                     self.stars = starlist.sort_values(by=[r'distance'])
                     
