@@ -301,7 +301,7 @@ class PixelMapFit:
 
                 #Set starting values to converge from
                 self.heatmap_error[np.where(self.heatmap_error==None)]=np.nan
-                composite_heatmap = self.heat_stamp.sum(axis=0).reshape(self.size) / ((np.nansum(self.heatmap_error**2,axis=0))**(1/2)).reshape(size)#issue with numpy using sqrt?
+                composite_heatmap = self.heat_stamp.sum(axis=0).reshape(self.size) / ((np.nansum(self.heatmap_error**2,axis=0))**(1/2)).reshape(self.size)#issue with numpy using sqrt?
                 c = np.where(composite_heatmap==composite_heatmap.max())
                 params = Parameters()
                 for i in np.arange(len(frequencies)):
