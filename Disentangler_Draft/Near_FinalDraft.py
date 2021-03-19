@@ -100,7 +100,7 @@ class PixelMapFit:
 
             flux = corrected_lc.flux
             times = corrected_lc.time - np.mean(corrected_lc.time)
-            pg = corrected_lc.to_periodogram(frequency = frequency_list)
+            pg = corrected_lc.to_periodogram(frequency = frequency_list,ls_method='slow')
             initial_flux= np.asarray(pg.power)
 
 
@@ -140,7 +140,7 @@ class PixelMapFit:
 
             flux = corrected_lc.flux
             times = corrected_lc.time - np.mean(corrected_lc.time)
-            pg = corrected_lc.to_periodogram(frequency = frequency_list)
+            pg = corrected_lc.to_periodogram(frequency = frequency_list,ls_method='slow')
             initial_flux= np.asarray(pg.power)
 
 
@@ -300,8 +300,8 @@ class PixelMapFit:
                     return np.asarray(res)
 
                 #Set starting values to converge from
-                heatmap_error[np.where(heatmap_error==None)]=np.nan
-                composite_heatmap = heat_stamp.sum(axis=0).reshape(size) / ((np.nansum(heatmap_error**2,axis=0))**(1/2)).reshape(size)#issue with numpy using sqrt?
+                self.heatmap_error[np.where(self.heatmap_error==None)]=np.nan
+                composite_heatmap = self.heat_stamp.sum(axis=0).reshape(self.size) / ((np.nansum(self.heatmap_error**2,axis=0))**(1/2)).reshape(size)#issue with numpy using sqrt?
                 c = np.where(composite_heatmap==composite_heatmap.max())
                 params = Parameters()
                 for i in np.arange(len(frequencies)):
