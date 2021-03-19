@@ -333,7 +333,7 @@ class PixelMapFit:
                                  x = np.asarray(gaia_data['x']),
                                  y = np.asarray(gaia_data['y']),
                                  distance = distances,
-                                 probability = stats.norm.sf(distances,scale=np.sqrt(self.result.params['x'].stderr**2 +self.result.params['y'].stderr**2 )))
+                                 probability = 2*stats.norm.sf(distances,scale=np.sqrt(self.result.params['x'].stderr**2 +self.result.params['y'].stderr**2 )))#I believe mutiply by 2 since we wont have a negative distance
                     starlist = pd.DataFrame.from_dict(stars)
                     self.stars = starlist.sort_values(by=[r'distance'])
                     
