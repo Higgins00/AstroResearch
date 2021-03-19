@@ -344,7 +344,7 @@ class PixelMapFit:
         self.result = fh.result
     
     def info(self):
-        plt.imshow(self.heatmap,origin=0)
+        plt.imshow(self.heatmap,origin='lower')
         #plot the centroid
         if (self.gaiadata != None):
             plt.scatter(self.gaiadata['x'],self.gaiadata['y'],s=self.gaiadata['size']*5,c='white',alpha=.6)
