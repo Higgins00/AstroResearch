@@ -38,10 +38,13 @@ class PixelMapFit:
         
     """
     
-    def __init__(self, targetpixelfile, gaia=True, magnitude_limit=18, frequencies=[], frequnit=u.uHz, principle_components = 5, **kwargs):
+    def __init__(self, targetpixelfile, gaia=True, magnitude_limit=18, frequencies=[], frequnit=u.uHz, principle_components = 5,aperture=None, **kwargs):
 
         #Defining an aperture that will be used in plotting and making empty 2-d arrays of the correct size for masks
-        self.aperture = targetpixelfile.pipeline_mask
+        if targetpixelfile.pipeline_mask.any() == False:
+            self.aperture = aperture
+        else:
+            self.aperture = targetpixelfile.pipeline_mask
         self.tpf = targetpixelfile
     
         
