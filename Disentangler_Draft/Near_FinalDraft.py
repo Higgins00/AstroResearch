@@ -62,7 +62,7 @@ class PixelMapFit:
 
             flux = corrected_lc.flux
             times = corrected_lc.time - np.mean(corrected_lc.time)
-            pg = corrected_lc.to_periodogram(frequency = np.append([0],frequency_list),ls_method='slow')
+            pg = corrected_lc.to_periodogram(frequency = np.append([0.0001],frequency_list),ls_method='slow')
             initial_flux= np.asarray(pg.power[1:])
 
             initial_phase = np.zeros(len(frequency_list))
@@ -103,7 +103,7 @@ class PixelMapFit:
 
             flux = corrected_lc.flux
             times = corrected_lc.time - np.mean(corrected_lc.time)
-            pg = corrected_lc.to_periodogram(frequency = np.append([0],frequency_list),ls_method='slow')
+            pg = corrected_lc.to_periodogram(frequency = np.append([0.0001],frequency_list),ls_method='slow')
             initial_flux= np.asarray(pg.power[1:])
 
 
@@ -143,7 +143,7 @@ class PixelMapFit:
 
             flux = corrected_lc.flux
             times = corrected_lc.time - np.mean(corrected_lc.time)
-            pg = corrected_lc.to_periodogram(frequency = np.append([0],frequency_list),ls_method='slow')
+            pg = corrected_lc.to_periodogram(frequency = np.append([0.0001],frequency_list),ls_method='slow')
             initial_flux= np.asarray(pg.power[1:])
 
 
