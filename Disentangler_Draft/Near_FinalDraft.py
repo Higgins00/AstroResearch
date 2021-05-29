@@ -60,8 +60,8 @@ class PixelMapFit:
         
         def Obtain_Initial_Phase(tpf,corrected_lc,frequency_list):
 
-            flux = corrected_lc.flux
-            times = corrected_lc.time - np.mean(corrected_lc.time)
+            flux = corrected_lc.flux.value
+            times = corrected_lc.time.value - np.mean(corrected_lc.time.value)
             pg = corrected_lc.to_periodogram(frequency = np.append([0.0001],frequency_list),ls_method='slow')
             initial_flux= np.asarray(pg.power[1:])
 
@@ -92,7 +92,7 @@ class PixelMapFit:
                 params['f{0:d}phase'.format(j)].set(vary=True)
                 params['f{0:d}phase'.format(j)].set(value = initial_phase[j])
                 params['f{0:d}phase'.format(j)].set(brute_step=np.pi/10)
-                result = model.fit(corrected_lc.flux,params,time=times,method = 'brute')
+                result = model.fit(corrected_lc.flux.value,params,time=times,method = 'brute')
                 initial_phase[j]=result.best_values['f{0:d}phase'.format(j)]
 
             return initial_phase
@@ -101,8 +101,8 @@ class PixelMapFit:
         
         def Obtain_Final_Phase(tpf,corrected_lc,frequency_list,initial_phases):
 
-            flux = corrected_lc.flux
-            times = corrected_lc.time - np.mean(corrected_lc.time)
+            flux = corrected_lc.flux.value
+            times = corrected_lc.time.value - np.mean(corrected_lc.time.value)
             pg = corrected_lc.to_periodogram(frequency = np.append([0.0001],frequency_list),ls_method='slow')
             initial_flux= np.asarray(pg.power[1:])
 
@@ -130,7 +130,7 @@ class PixelMapFit:
 
             params = model.make_params()
 
-            result = model.fit(corrected_lc.flux,params,time=times)
+            result = model.fit(corrected_lc.flux.value,params,time=times)
             
             final_phases = [result.best_values['f{0:d}phase'.format(j)] for j in np.arange(len(frequency_list))]
 
@@ -141,8 +141,8 @@ class PixelMapFit:
     
         def Obtain_Final_Fit(tpf,corrected_lc,frequency_list,final_phases):
 
-            flux = corrected_lc.flux
-            times = corrected_lc.time - np.mean(corrected_lc.time)
+            flux = corrected_lc.flux.value
+            times = corrected_lc.time.value - np.mean(corrected_lc.time.value)
             pg = corrected_lc.to_periodogram(frequency = np.append([0.0001],frequency_list),ls_method='slow')
             initial_flux= np.asarray(pg.power[1:])
 
@@ -170,7 +170,7 @@ class PixelMapFit:
 
             params = model.make_params()
 
-            result = model.fit(corrected_lc.flux,params,time=times)
+            result = model.fit(corrected_lc.flux.value,params,time=times)
             
             return result
         
@@ -218,7 +218,7 @@ class PixelMapFit:
         #Defining self.periodogram as this 2-d array of periodogram data
         self.heatmap = heats.T
         self.heatmap_error = heats_error.T
-        self.timeserieslength = (self.tpf.astropy_time.max()-self.tpf.astropy_time.min()).value
+        self.timeserieslength = (self.tpf.time.max()-self.tpf.time.min()).value
         self.gaiadata = None
         
         if (gaia == True):
@@ -247,7 +247,7 @@ class PixelMapFit:
             if len(result) == 0:
                 raise no_targets_found_message
 
-            year = ((self.tpf.astropy_time[0].jd - 2457206.375) * u.day).to(u.year)
+            year = ((self.tpf.time[0].jd - 2457206.375) * u.day).to(u.year)
             pmra = ((np.nan_to_num(np.asarray(result.pmRA)) * u.milliarcsecond/u.year) * year).to(u.deg).value
             pmdec = ((np.nan_to_num(np.asarray(result.pmDE)) * u.milliarcsecond/u.year) * year).to(u.deg).value
             result.RA_ICRS += pmra
@@ -362,7 +362,7 @@ class PixelMapFit:
     
     def pca(self):
         plt.figure(figsize=(12,5))
-        plt.plot(self.tpf.time, self.dm.values + np.arange(self.principle_components)*0.2)
+        plt.plot(self.tpf.time.value, self.dm.values + np.arange(self.principle_components)*0.2)
         plt.title('Principle Components Contributions')
         plt.xlabel('Offset')
         g2 = self.raw_lc.plot(label='Raw light curve')
